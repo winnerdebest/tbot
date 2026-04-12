@@ -1,0 +1,7 @@
+pyrogram
+openai
+supabase
+python-dotenv
+pyyaml
+fastapi
+uvicorn
