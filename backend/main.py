@@ -128,8 +128,9 @@ async def update_lifestyle_summary(telegram_id: int):
     """
     try:
         print(f"🧠 [SUMMARIZER]: Updating lifestyle summary for {telegram_id}...")
-        messages = get_recent_messages(telegram_id, limit=10)
-        new_summary = await generate_lifestyle_summary(messages)
+        messages = get_recent_messages(telegram_id, limit=20) # Increased to 20 for more context
+        current_summary = get_lifestyle_summary(telegram_id)
+        new_summary = await generate_lifestyle_summary(messages, current_summary)
         update_lifestyle(telegram_id, new_summary)
         print(f"✅ [SUMMARIZER]: Summary updated for {telegram_id}")
     except Exception as e:
@@ -433,8 +434,9 @@ def set_target_goal(telegram_id: int, req: GoalRequest):
 async def regenerate_user_summary(telegram_id: int):
     """Force-regenerate the lifestyle summary for a user."""
     try:
-        messages = get_recent_messages(telegram_id, limit=10)
-        new_summary = await generate_lifestyle_summary(messages)
+        messages = get_recent_messages(telegram_id, limit=20)
+        current_summary = get_lifestyle_summary(telegram_id)
+        new_summary = await generate_lifestyle_summary(messages, current_summary)
         update_lifestyle(telegram_id, new_summary)
         return {"status": "ok", "summary": new_summary}
     except Exception as e:

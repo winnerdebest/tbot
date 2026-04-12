@@ -128,21 +128,22 @@ async def generate_response(
 # PHASE 3: Lifestyle Summarizer
 # ============================================================
 
-async def generate_lifestyle_summary(recent_messages: list[dict]) -> str:
+async def generate_lifestyle_summary(recent_messages: list[dict], current_summary: str = "New user. No data yet.") -> str:
     """
-    Analyze recent messages and extract a lifestyle summary.
+    Analyze recent messages and incrementally update the lifestyle summary.
     Called by update_lifestyle_summary() in main.py.
 
-    Takes the last 10 messages and asks Grok to extract:
-    - Interests and hobbies
-    - Daily habits and routines
-    - Lifestyle facts (job, location, preferences, etc.)
-    - Communication style
+    Takes the last 10 messages and the existing summary to extract:
+    - New/updated interests and hobbies
+    - Changes in daily habits and routines
+    - New lifestyle facts (job, location, preferences, etc.)
+    - Refined communication style
 
-    Returns a concise paragraph summarizing the user.
+    Returns a concise paragraph (3-5 sentences) that integrates new info
+    with existing knowledge.
     """
     if not recent_messages:
-        return "New user. No data yet."
+        return current_summary
 
     # Format messages for analysis
     conversation = "\n".join(
@@ -150,20 +151,22 @@ async def generate_lifestyle_summary(recent_messages: list[dict]) -> str:
     )
 
     summarizer_prompt = (
-        "You are an analytical assistant. Analyze the following conversation "
-        "between a user and a bot. Extract key facts about the USER (not the bot).\n\n"
-        "Focus on:\n"
-        "- Their interests, hobbies, and passions\n"
-        "- Daily habits and routines they mention\n"
-        "- Lifestyle facts (job, school, location, relationships, pets, etc.)\n"
-        "- Their communication style and personality traits\n"
-        "- Any preferences they've expressed (food, music, activities, etc.)\n\n"
-        "Write a concise paragraph (3-5 sentences) summarizing what you know "
-        "about this person. Only include facts that are clearly stated or "
-        "strongly implied — do not speculate.\n\n"
-        "If there isn't enough information, say 'Limited data — user has not "
-        "shared much about themselves yet.'\n\n"
-        f"--- CONVERSATION ---\n{conversation}\n--- END ---"
+        "You are an analytical assistant. You are responsible for maintaining a "
+        "concise 'Lifestyle Summary' for a user based on their conversations.\n\n"
+        "--- CURRENT SUMMARY ---\n"
+        f"{current_summary}\n\n"
+        "--- NEW CONVERSATION ---\n"
+        f"{conversation}\n\n"
+        "TASK:\n"
+        "1. Analyze the new conversation for any NEW facts, interests, or habits.\n"
+        "2. Update the CURRENT SUMMARY by integrating these new details.\n"
+        "3. KEEP key information from the current summary that hasn't changed.\n"
+        "4. If new information contradicts the old summary (e.g., they moved), update it.\n"
+        "5. Output a single, refined 3-5 sentence paragraph summarizing everything "
+        "you now know about the user. Do not lose information from the old summary "
+        "unless it is now outdated.\n\n"
+        "Only include facts that are clearly stated or strongly implied. "
+        "If there is still very little data, maintain a simple summary."
     )
 
     try:
