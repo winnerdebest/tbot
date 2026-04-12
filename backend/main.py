@@ -46,6 +46,7 @@ from db import (
     is_user_blocked,
     set_user_blocked,
     get_blocked_users,
+    update_user_goal,
 )
 from ai import generate_response, generate_lifestyle_summary
 
