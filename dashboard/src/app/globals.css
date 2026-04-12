@@ -350,6 +350,8 @@ a { color: inherit; text-decoration: none; }
   border: 1px solid var(--border);
   transition: border-color 0.15s ease;
   animation: fadeUp 0.2s var(--ease) both;
+  width: 100%;
+  min-width: 0;
 }
 
 .message-bubble:hover { border-color: var(--border-hover); }
@@ -850,9 +852,9 @@ textarea.form-input { resize: vertical; min-height: 100px; }
   /* ── Glass card ── */
   .glass-card { padding: 16px; }
 
-  /* ── Table → hide on mobile, use card list instead ── */
-  .data-table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .data-table { font-size: 12px; min-width: 500px; }
+  /* ── Table → handle overflow ── */
+  .data-table-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .data-table { font-size: 12px; min-width: 480px; width: 100%; }
   .data-table th, .data-table td { padding: 10px 10px; }
 
   /* ── Lifestyle badge ── */

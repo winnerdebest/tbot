@@ -180,34 +180,36 @@ export default function OverviewPage() {
               <p className="empty-state-text">No users yet. They&apos;ll appear once someone messages the bot.</p>
             </div>
           ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>User</th>
-                  <th>Last Active</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentUsers.map((user) => (
-                  <tr key={user.telegram_id}>
-                    <td>
-                      <div className="user-tag">
-                        <div className="user-tag-avatar">
-                          {user.first_name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <div className="user-tag-name">{user.first_name}</div>
-                          <div className="user-tag-username">
-                            {user.username ? `@${user.username}` : `ID: ${user.telegram_id}`}
+            <div className="data-table-wrapper">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Last Active</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentUsers.map((user) => (
+                    <tr key={user.telegram_id}>
+                      <td>
+                        <div className="user-tag">
+                          <div className="user-tag-avatar">
+                            {user.first_name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="user-tag-name">{user.first_name}</div>
+                            <div className="user-tag-username">
+                              {user.username ? `@${user.username}` : `ID: ${user.telegram_id}`}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="text-sm text-muted">{formatTime(user.last_active)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </td>
+                      <td className="text-sm text-muted">{formatTime(user.last_active)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
