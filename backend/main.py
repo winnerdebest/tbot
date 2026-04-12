@@ -131,8 +131,11 @@ async def update_lifestyle_summary(telegram_id: int):
         messages = get_recent_messages(telegram_id, limit=20) # Increased to 20 for more context
         current_summary = get_lifestyle_summary(telegram_id)
         new_summary = await generate_lifestyle_summary(messages, current_summary)
-        update_lifestyle(telegram_id, new_summary)
-        print(f"✅ [SUMMARIZER]: Summary updated for {telegram_id}")
+        if new_summary:
+            update_lifestyle(telegram_id, new_summary)
+            print(f"✅ [SUMMARIZER]: Summary updated for {telegram_id}")
+        else:
+            print(f"⚠️ [SUMMARIZER]: Skipped update due to AI error.")
     except Exception as e:
         print(f"❌ [SUMMARIZER ERROR]: {e}")
 
@@ -437,8 +440,11 @@ async def regenerate_user_summary(telegram_id: int):
         messages = get_recent_messages(telegram_id, limit=20)
         current_summary = get_lifestyle_summary(telegram_id)
         new_summary = await generate_lifestyle_summary(messages, current_summary)
-        update_lifestyle(telegram_id, new_summary)
-        return {"status": "ok", "summary": new_summary}
+        if new_summary:
+            update_lifestyle(telegram_id, new_summary)
+            return {"status": "ok", "summary": new_summary}
+        else:
+            return {"status": "error", "detail": "AI failed to generate summary"}
     except Exception as e:
         return {"status": "error", "detail": str(e)}
 

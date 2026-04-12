@@ -49,6 +49,6 @@ class AIHandler:
             return response.text
         except Exception as e:
             print(f"Error generating AI response: {e}")
-            return "I'm having a bit of trouble thinking straight right now. Give me a moment."
+            return None
 
 ai_handler = AIHandler()

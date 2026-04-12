@@ -121,7 +121,7 @@ async def generate_response(
         return response.choices[0].message.content
     except Exception as e:
         print(f"❌ [AI ERROR]: {e}")
-        return "I'm having a bit of trouble thinking straight right now. Give me a moment."
+        return None
 
 
 # ============================================================
@@ -176,5 +176,5 @@ async def generate_lifestyle_summary(recent_messages: list[dict], current_summar
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        print(f"❌ [SUMMARIZER ERROR]: {e}")
-        return "Error generating summary. Will retry on next trigger."
+        print(f"Error generating AI response: {e}")
+        return None
