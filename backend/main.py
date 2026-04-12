@@ -21,6 +21,12 @@ import uvicorn
 import yaml
 from contextlib import asynccontextmanager
 
+# Fix for Python 3.14 compatibility with Pyrogram imports
+try:
+    asyncio.get_running_loop()
+except RuntimeError:
+    asyncio.set_event_loop(asyncio.new_event_loop())
+
 from dotenv import load_dotenv
 from pyrogram import Client, filters, enums, idle
 from fastapi import FastAPI
