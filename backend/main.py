@@ -202,9 +202,6 @@ async def handle_private_message(client, message):
     # ── Step 3: Log incoming user message ──
     log_message(telegram_id=chat_id, role="user", content=user_text)
 
-    # Mark chat as read
-    await client.read_chat_history(chat_id)
-
     # ── Step 4: Check Availability & Handle Transition Messages ──
     available, status = is_persona_available()
     last_status = profile.get("last_notified_status") if profile else None
@@ -232,18 +229,24 @@ async def handle_private_message(client, message):
             update_notified_status(chat_id, status)
             
             # Send the busy message (no need for a long delay here, it's a "quick" head-out)
+            # We mark as read ONLY when we acknowledge the receipt with a transition message
+            await client.read_chat_history(chat_id)
             await client.send_chat_action(chat_id, enums.ChatAction.TYPING)
             await asyncio.sleep(2)
             await client.send_message(chat_id, busy_msg)
             log_message(telegram_id=chat_id, role="bot", content=busy_msg)
             return
         else:
-            print(f"🤫 [SILENT]: Bot is {status}ing. Ignoring message from {chat_id}.")
+            print(f"🤫 [SILENT]: Bot is {status}ing. Ignoring message and NOT marking as read.")
             return
 
-    # If we are back to being available, clear the notified status so transition triggers next time
+    # If we are back to being available:
+    # 1. Clear the notified status
     if last_status is not None:
         update_notified_status(chat_id, None)
+    
+    # 2. Mark chat as read now that we are actually "checking" our phone
+    await client.read_chat_history(chat_id)
 
     # ── Step 5: Get recent history + generate AI response ──
     recent = get_recent_messages(chat_id, limit=10)
