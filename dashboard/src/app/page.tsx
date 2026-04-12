@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { fetchStats, type Stats } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import type { MessageLog, UserProfile } from "@/lib/api";
+import { Users, MessageSquare, Activity, Bot, User } from 'lucide-react';
 
 export default function OverviewPage() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -69,7 +70,7 @@ export default function OverviewPage() {
       <div className="stats-grid">
         <div className="stat-card purple">
           <div className="stat-card-header">
-            <div className="stat-card-icon purple">👥</div>
+            <div className="stat-card-icon purple"><Users size={20} /></div>
             <span className="stat-card-label">Total Users</span>
           </div>
           {loading ? (
@@ -81,7 +82,7 @@ export default function OverviewPage() {
 
         <div className="stat-card blue">
           <div className="stat-card-header">
-            <div className="stat-card-icon blue">💬</div>
+            <div className="stat-card-icon blue"><MessageSquare size={20} /></div>
             <span className="stat-card-label">Total Messages</span>
           </div>
           {loading ? (
@@ -93,7 +94,7 @@ export default function OverviewPage() {
 
         <div className="stat-card emerald">
           <div className="stat-card-header">
-            <div className="stat-card-icon emerald">🟢</div>
+            <div className="stat-card-icon emerald"><Activity size={20} /></div>
             <span className="stat-card-label">Active Today</span>
           </div>
           {loading ? (
@@ -105,7 +106,7 @@ export default function OverviewPage() {
 
         <div className="stat-card amber">
           <div className="stat-card-header">
-            <div className="stat-card-icon amber">🤖</div>
+            <div className="stat-card-icon amber"><Bot size={20} /></div>
             <span className="stat-card-label">Bot Responses</span>
           </div>
           {loading ? (
@@ -134,7 +135,7 @@ export default function OverviewPage() {
             </div>
           ) : recentMessages.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">💬</div>
+              <div className="empty-state-icon"><MessageSquare size={32} /></div>
               <p className="empty-state-text">No messages yet. Start a conversation with the bot!</p>
             </div>
           ) : (
@@ -142,7 +143,7 @@ export default function OverviewPage() {
               {recentMessages.slice(0, 5).map((msg) => (
                 <div key={msg.id} className="message-bubble">
                   <div className={`message-avatar ${msg.role === "bot" ? "bot-avatar" : "user-avatar"}`}>
-                    {msg.role === "bot" ? "🤖" : "👤"}
+                    {msg.role === "bot" ? <Bot size={16} /> : <User size={16} />}
                   </div>
                   <div className="message-content">
                     <div className="message-meta">
@@ -175,7 +176,7 @@ export default function OverviewPage() {
             </div>
           ) : recentUsers.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">👥</div>
+              <div className="empty-state-icon"><Users size={32} /></div>
               <p className="empty-state-text">No users yet. They&apos;ll appear once someone messages the bot.</p>
             </div>
           ) : (

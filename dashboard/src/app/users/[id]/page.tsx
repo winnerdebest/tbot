@@ -14,6 +14,7 @@ import {
   type MessageLog,
   type UserProfile,
 } from "@/lib/api";
+import { CopyX, Lock, Unlock, Edit2, RotateCw, Loader2, Brain, Target, MessageSquare, Activity, UserX, CheckCircle } from 'lucide-react';
 
 interface UserDetail extends UserProfile {
   message_count: number;
@@ -210,7 +211,7 @@ export default function UserDetailPage() {
     return (
       <div className="fade-in">
         <div className="empty-state">
-          <div className="empty-state-icon">❌</div>
+          <div className="empty-state-icon"><UserX size={32} /></div>
           <p className="empty-state-text">User not found</p>
           <Link href="/users">
             <button className="btn btn-secondary" style={{ marginTop: 16 }}>
@@ -247,7 +248,7 @@ export default function UserDetailPage() {
             className={`btn ${user.is_blocked ? "btn-primary" : "btn-danger"}`}
             style={{ fontSize: 13, padding: "8px 16px" }}
           >
-            {user.is_blocked ? "🔓 Unblock" : "🚫 Block User"}
+            {user.is_blocked ? <><Unlock size={14} /> Unblock</> : <><Lock size={14} /> Block User</>}
           </button>
         </div>
       </div>
@@ -258,7 +259,7 @@ export default function UserDetailPage() {
         <div className="crm-sidebar">
           {/* Stats */}
           <div className="glass-card">
-            <h3 className="glass-card-title" style={{ marginBottom: 16 }}>📊 Quick Stats</h3>
+            <h3 className="glass-card-title" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}><Activity size={18} /> Quick Stats</h3>
             <div className="crm-stat-row">
               <span className="text-sm text-muted">Total Messages</span>
               <span style={{ fontWeight: 700, fontSize: 18 }}>{user.message_count}</span>
@@ -271,9 +272,9 @@ export default function UserDetailPage() {
               <span className="text-sm text-muted">Status</span>
               <span className="text-sm">
                 {user.is_blocked ? (
-                  <span style={{ color: "var(--accent-rose)" }}>🚫 Blocked</span>
+                  <span style={{ color: "var(--accent-rose)", display: 'flex', alignItems: 'center', gap: 4 }}><Lock size={14} /> Blocked</span>
                 ) : (
-                  <span style={{ color: "var(--accent-emerald)" }}>✅ Active</span>
+                  <span style={{ color: "var(--accent-emerald)", display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle size={14} /> Active</span>
                 )}
               </span>
             </div>
@@ -282,7 +283,7 @@ export default function UserDetailPage() {
           {/* Strategic Goal */}
           <div className="glass-card" style={{ marginBottom: 16 }}>
             <div className="glass-card-header">
-              <h3 className="glass-card-title">🎯 Strategic Goal</h3>
+              <h3 className="glass-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Target size={18} /> Strategic Goal</h3>
               <button
                 onClick={() => {
                   setEditingGoal(!editingGoal);
@@ -292,7 +293,7 @@ export default function UserDetailPage() {
                 className="btn btn-secondary"
                 style={{ fontSize: 11, padding: "4px 10px" }}
               >
-                ✏️ Edit
+                <Edit2 size={12} /> Edit
               </button>
             </div>
 
@@ -359,7 +360,7 @@ export default function UserDetailPage() {
           {/* Lifestyle Summary */}
           <div className="glass-card">
             <div className="glass-card-header">
-              <h3 className="glass-card-title">🧠 AI Summary</h3>
+              <h3 className="glass-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Brain size={18} /> AI Summary</h3>
               <div style={{ display: "flex", gap: 6 }}>
                 <button
                   onClick={handleRegenerate}
@@ -367,7 +368,7 @@ export default function UserDetailPage() {
                   className="btn btn-secondary"
                   style={{ fontSize: 11, padding: "4px 10px" }}
                 >
-                  {regenerating ? "⏳" : "🔄"} Regen
+                  {regenerating ? <Loader2 size={12} className="animate-spin" /> : <RotateCw size={12} />} Regen
                 </button>
                 <button
                   onClick={() => {
@@ -377,7 +378,7 @@ export default function UserDetailPage() {
                   className="btn btn-secondary"
                   style={{ fontSize: 11, padding: "4px 10px" }}
                 >
-                  ✏️ Edit
+                  <Edit2 size={12} /> Edit
                 </button>
               </div>
             </div>
@@ -422,7 +423,7 @@ export default function UserDetailPage() {
         <div className="crm-chat-container glass-card" style={{ padding: 0, display: "flex", flexDirection: "column" }}>
           {/* Chat Header */}
           <div className="crm-chat-header">
-            <h3 className="glass-card-title">💬 Conversation</h3>
+            <h3 className="glass-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MessageSquare size={18} /> Conversation</h3>
             <span className="glass-card-badge">{messages.length} messages</span>
           </div>
 
@@ -430,7 +431,7 @@ export default function UserDetailPage() {
           <div className="crm-chat-messages">
             {messages.length === 0 ? (
               <div className="empty-state" style={{ padding: "40px 20px" }}>
-                <div className="empty-state-icon">💬</div>
+                <div className="empty-state-icon"><MessageSquare size={32} /></div>
                 <p className="empty-state-text">No messages yet</p>
               </div>
             ) : (

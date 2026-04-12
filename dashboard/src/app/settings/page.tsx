@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchHealth, updateStatus, fetchPersona, updatePersona } from "@/lib/api";
+import { Wand2 } from 'lucide-react';
 
 export default function SettingsPage() {
   const [botEnabled, setBotEnabled] = useState<boolean | null>(null);
@@ -108,8 +109,8 @@ export default function SettingsPage() {
               className={`btn ${botEnabled ? 'btn-primary' : 'btn-secondary'}`}
               style={{
                 width: 100,
-                backgroundColor: botEnabled ? '#10b981' : undefined,
-                color: botEnabled ? 'white' : undefined,
+                backgroundColor: botEnabled ? 'var(--emerald)' : undefined,
+                color: botEnabled ? '#131315' : undefined,
                 border: botEnabled ? 'none' : undefined
               }}
             >
@@ -122,7 +123,7 @@ export default function SettingsPage() {
         {persona && (
           <div className="glass-card">
             <div className="glass-card-header">
-              <h2 className="glass-card-title">🎭 AI Persona Editor</h2>
+              <h2 className="glass-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Wand2 size={18} /> AI Persona Editor</h2>
             </div>
             
             <form onSubmit={handleSavePersona}>

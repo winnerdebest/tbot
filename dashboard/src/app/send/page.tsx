@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { sendManualMessage } from "@/lib/api";
+import { Send, Info } from 'lucide-react';
 
 export default function SendPage() {
   const [telegramId, setTelegramId] = useState("");
@@ -57,7 +58,7 @@ export default function SendPage() {
       <div style={{ maxWidth: 600 }}>
         <div className="glass-card">
           <div className="glass-card-header">
-            <h2 className="glass-card-title">📤 Manual Message</h2>
+            <h2 className="glass-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Send size={18} /> Manual Message</h2>
           </div>
 
           <form onSubmit={handleSend}>
@@ -103,8 +104,8 @@ export default function SendPage() {
 
         {/* Info Card */}
         <div className="glass-card" style={{ marginTop: 20 }}>
-          <h3 className="glass-card-title" style={{ marginBottom: 12 }}>
-            ℹ️ How it works
+          <h3 className="glass-card-title" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Info size={18} /> How it works
           </h3>
           <p className="text-sm text-muted" style={{ lineHeight: 1.7 }}>
             This sends a message via the Pyrogram userbot directly to the user&apos;s

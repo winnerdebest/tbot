@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { MessageLog } from "@/lib/api";
+import { List, User, Bot, MessageSquare } from 'lucide-react';
 
 export default function MessagesPage() {
   const [messages, setMessages] = useState<MessageLog[]>([]);
@@ -66,7 +67,7 @@ export default function MessagesPage() {
             }}
             style={{ padding: "8px 16px", fontSize: 13 }}
           >
-            {role === "all" ? "📋 All" : role === "user" ? "👤 Users" : "🤖 Bot"}
+            {role === "all" ? <><List size={14} /> All</> : role === "user" ? <><User size={14} /> Users</> : <><Bot size={14} /> Bot</>}
           </button>
         ))}
       </div>
@@ -85,7 +86,7 @@ export default function MessagesPage() {
           </div>
         ) : messages.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">💬</div>
+            <div className="empty-state-icon"><MessageSquare size={32} /></div>
             <p className="empty-state-text">No messages found. Start chatting with the bot!</p>
           </div>
         ) : (
@@ -101,7 +102,7 @@ export default function MessagesPage() {
                     msg.role === "bot" ? "bot-avatar" : "user-avatar"
                   }`}
                 >
-                  {msg.role === "bot" ? "🤖" : "👤"}
+                  {msg.role === "bot" ? <Bot size={16} /> : <User size={16} />}
                 </div>
                 <div className="message-content">
                   <div className="message-meta">

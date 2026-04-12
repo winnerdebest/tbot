@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Bot } from 'lucide-react';
 
 export default function LoginPage() {
   const [password, setPassword] = useState("");
@@ -39,7 +40,7 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-card">
         <div className="login-header">
-          <div className="login-icon">🤖</div>
+          <div className="login-icon"><Bot size={44} /></div>
           <h1 className="login-title">Ani Dashboard</h1>
           <p className="login-subtitle">Enter your password to continue</p>
         </div>
