@@ -88,7 +88,7 @@ export default function SettingsPage() {
   const selectedCountry = useMemo(() => {
     if (!persona?.timezone) return null;
     const tz = ct.getTimezone(persona.timezone);
-    return tz ? countryOptions.find(c => c.value === tz.country) : null;
+    return tz ? countryOptions.find(c => c.value === tz.countries[0]) : null;
   }, [persona?.timezone, countryOptions]);
 
   const timezoneOptions = useMemo(() => {
