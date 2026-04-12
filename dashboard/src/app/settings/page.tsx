@@ -172,6 +172,71 @@ export default function SettingsPage() {
                 />
               </div>
 
+              <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '24px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  🕒 Life Schedule & Timezone
+                </h3>
+                
+                <div className="form-group">
+                  <label className="form-label">Timezone (e.g., America/New_York)</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={persona.timezone || "UTC"}
+                    onChange={(e) => setPersona({ ...persona, timezone: e.target.value })}
+                    disabled={savingPersona}
+                    placeholder="America/New_York"
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Sleep Starts (Hour 0-23)</label>
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={persona.sleep_schedule?.[0] || 23}
+                      onChange={(e) => {
+                        const newSleep = [...(persona.sleep_schedule || [23, 7])];
+                        newSleep[0] = parseInt(e.target.value);
+                        setPersona({ ...persona, sleep_schedule: newSleep });
+                      }}
+                      disabled={savingPersona}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Sleep Ends (Hour 0-23)</label>
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={persona.sleep_schedule?.[1] || 7}
+                      onChange={(e) => {
+                        const newSleep = [...(persona.sleep_schedule || [23, 7])];
+                        newSleep[1] = parseInt(e.target.value);
+                        setPersona({ ...persona, sleep_schedule: newSleep });
+                      }}
+                      disabled={savingPersona}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Work Shifts (e.g., 9-12, 13-17)</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={persona.work_schedule?.map((s: number[]) => s.join('-')).join(', ') || ""}
+                    onChange={(e) => {
+                      const shifts = e.target.value.split(',').map(s => s.trim().split('-').map(n => parseInt(n)));
+                      setPersona({ ...persona, work_schedule: shifts.filter(s => s.length === 2 && !isNaN(s[0])) });
+                    }}
+                    disabled={savingPersona}
+                    placeholder="9-12, 13-17"
+                  />
+                  <p className="text-xs text-muted" style={{ marginTop: 4 }}>Enter shifts as 'Start-End' separated by commas.</p>
+                </div>
+              </div>
+
               <button
                 type="submit"
                 className="btn btn-primary"

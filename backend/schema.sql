@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     username      TEXT,
     first_name    TEXT NOT NULL,
     lifestyle_summary TEXT DEFAULT 'New user. No data yet.',
+    target_goal   TEXT,
+    goal_strictness TEXT DEFAULT 'balanced',
+    last_notified_status TEXT,
     last_active   TIMESTAMPTZ DEFAULT NOW()
 );
 

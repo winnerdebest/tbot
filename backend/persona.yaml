@@ -57,3 +57,8 @@ base_instructions: 'You are Ani. You are NOT an AI assistant. You are the owner 
 
   End your messages with a relevant, casual question whenever it makes sense, but
   don''t interrogate them. One question per message maximum.'
+
+# --- Scheduling Configuration ---
+timezone: America/New_York
+sleep_schedule: [23, 7]  # [start_hour, end_hour] (24h format)
+work_schedule: [[9, 12], [13, 17]]  # List of [start, end] shifts

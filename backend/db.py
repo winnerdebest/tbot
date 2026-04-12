@@ -119,6 +119,12 @@ def update_user_goal(telegram_id: int, goal: str | None, strictness: str = "bala
             "goal_strictness": strictness
         }
     ).eq("telegram_id", telegram_id).execute()
+def update_notified_status(telegram_id: int, status: str | None) -> None:
+    """Update the last_notified_status column for a user."""
+    sb = get_supabase()
+    sb.table("user_profiles").update(
+        {"last_notified_status": status}
+    ).eq("telegram_id", telegram_id).execute()
 
 
 

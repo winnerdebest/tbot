@@ -19,6 +19,8 @@ import random
 import threading
 import uvicorn
 import yaml
+import pytz
+from datetime import datetime
 from contextlib import asynccontextmanager
 
 # Fix for Python 3.14 compatibility with Pyrogram imports
@@ -47,6 +49,7 @@ from db import (
     set_user_blocked,
     get_blocked_users,
     update_user_goal,
+    update_notified_status,
 )
 from ai import generate_response, generate_lifestyle_summary
 
@@ -59,6 +62,44 @@ API_ID = os.getenv("API_ID")
 API_HASH = os.getenv("API_HASH")
 STRING_SESSION = os.getenv("TELEGRAM_STRING_SESSION")
 BOT_ENABLED = True
+
+# --- Scheduling State ---
+# Notified status is now handled via the database (user_profiles.last_notified_status)
+
+def get_persona_config():
+    """Helper to load persona.yaml safely."""
+    persona_path = os.path.join(os.path.dirname(__file__), "persona.yaml")
+    with open(persona_path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+def is_persona_available():
+    """
+    Checks if the persona is currently 'available' based on their timezone and schedule.
+    Returns: (is_available, status_type)
+    status_type can be "available", "sleep", or "work".
+    """
+    config = get_persona_config()
+    tz_name = config.get("timezone", "UTC")
+    tz = pytz.timezone(tz_name)
+    now = datetime.now(tz)
+    hour = now.hour
+
+    # Check Sleep Schedule
+    sleep_start, sleep_end = config.get("sleep_schedule", [23, 7])
+    if sleep_start > sleep_end:  # Overlaps midnight (e.g., 23 to 7)
+        if hour >= sleep_start or hour < sleep_end:
+            return False, "sleep"
+    else:
+        if sleep_start <= hour < sleep_end:
+            return False, "sleep"
+
+    # Check Work Schedule
+    work_shifts = config.get("work_schedule", [])
+    for start, end in work_shifts:
+        if start <= hour < end:
+            return False, "work"
+
+    return True, "available"
 
 # Pyrogram client: Uses string session if in production, otherwise falls back to local file.
 if STRING_SESSION:
@@ -160,9 +201,45 @@ async def handle_private_message(client, message):
     # Mark chat as read
     await client.read_chat_history(chat_id)
 
-    # ── Step 4: Show "typing" for realism ──
-    await client.send_chat_action(chat_id, enums.ChatAction.TYPING)
-    await asyncio.sleep(random.uniform(2, 5))
+    # ── Step 4: Check Availability & Handle Transition Messages ──
+    available, status = is_persona_available()
+    last_status = profile.get("last_notified_status") if profile else None
+
+    if not available:
+        # If we haven't notified this user yet in this busy period, send a short head-out message.
+        if last_status != status:
+            print(f"🕒 [BUSY]: Bot is in {status} mode. Sending transition message to {chat_id}...")
+            
+            # Simple persona-appropriate busy messages
+            if status == "sleep":
+                busy_msg = random.choice([
+                    "omg i'm finally heading to bed now, so tired! talk to you tomorrow? ✨",
+                    "hey! just about to pass out lol, i'll catch up with you in the morning! 🌙",
+                    "bout to head to sleep!! talk soon though safe night!! 😴"
+                ])
+            else: # status == "work"
+                busy_msg = random.choice([
+                    "hey! just heading into class/work right now so i'll be a bit busy!! talk later? 💻",
+                    "omg just starting work! i'll check my messages when i'm done though!!",
+                    "about to be busy for a few hours but i'll text you back later!! ✨"
+                ])
+            
+            # Record that we've notified them for this status in DB
+            update_notified_status(chat_id, status)
+            
+            # Send the busy message (no need for a long delay here, it's a "quick" head-out)
+            await client.send_chat_action(chat_id, enums.ChatAction.TYPING)
+            await asyncio.sleep(2)
+            await client.send_message(chat_id, busy_msg)
+            log_message(telegram_id=chat_id, role="bot", content=busy_msg)
+            return
+        else:
+            print(f"🤫 [SILENT]: Bot is {status}ing. Ignoring message from {chat_id}.")
+            return
+
+    # If we are back to being available, clear the notified status so transition triggers next time
+    if last_status is not None:
+        update_notified_status(chat_id, None)
 
     # ── Step 5: Get recent history + generate AI response ──
     recent = get_recent_messages(chat_id, limit=10)
@@ -176,8 +253,20 @@ async def handle_private_message(client, message):
         goal_strictness=goal_strictness,
     )
 
-    # ── Step 6: Reply + log bot response ──
+    # ── Step 6: Realistic Typing Delay ──
     if response:
+        # Calculate delay based on response length (3-6 chars per second)
+        char_speed = random.uniform(3, 6)
+        typing_delay = len(response) / char_speed
+        
+        # Cap delay for very long messages so it doesn't take 5 minutes
+        typing_delay = min(typing_delay, 15) # Max 15 seconds
+        
+        print(f"⌨️ [TYPING]: Realism delay for {len(response)} chars: {typing_delay:.2f}s")
+        await client.send_chat_action(chat_id, enums.ChatAction.TYPING)
+        await asyncio.sleep(typing_delay)
+
+        # ── Step 7: Reply + log bot response ──
         print(f"📡 [RESPONSE]: {response}")
         log_message(telegram_id=chat_id, role="bot", content=response)
         await message.reply(response)
