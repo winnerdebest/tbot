@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { fetchHealth, updateStatus, fetchPersona, updatePersona } from "@/lib/api";
 import { Wand2 } from 'lucide-react';
+import Select from 'react-select';
+import * as ct from 'countries-and-timezones';
 
 export default function SettingsPage() {
   const [botEnabled, setBotEnabled] = useState<boolean | null>(null);
@@ -73,6 +75,73 @@ export default function SettingsPage() {
   const handleEmotionsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const emotions = e.target.value.split('\n').filter(e => e.trim() !== '');
     setPersona({ ...persona, emotion_style: emotions });
+  };
+
+  // ── Timezone Helpers ──
+  const countryOptions = useMemo(() => {
+    return Object.values(ct.getAllCountries()).map(country => ({
+      value: country.id,
+      label: country.name
+    })).sort((a, b) => a.label.localeCompare(b.label));
+  }, []);
+
+  const selectedCountry = useMemo(() => {
+    if (!persona?.timezone) return null;
+    const tz = ct.getTimezone(persona.timezone);
+    return tz ? countryOptions.find(c => c.value === tz.country) : null;
+  }, [persona?.timezone, countryOptions]);
+
+  const timezoneOptions = useMemo(() => {
+    if (!selectedCountry) return [];
+    return ct.getTimezonesForCountry(selectedCountry.value).map(tz => ({
+      value: tz.name,
+      label: `${tz.name} (UTC ${tz.utcOffsetStr})`
+    }));
+  }, [selectedCountry]);
+
+  const selectStyles = {
+    control: (base: any, state: any) => ({
+      ...base,
+      backgroundColor: 'var(--bg-input)',
+      borderColor: state.isFocused ? 'var(--border-focus)' : 'var(--border)',
+      borderWidth: 0,
+      borderBottom: `2px solid ${state.isFocused ? 'var(--border-focus)' : 'var(--border)'}`,
+      borderRadius: 'var(--radius) var(--radius) 0 0',
+      minHeight: '42px',
+      boxShadow: 'none',
+      "&:hover": {
+        borderColor: 'var(--border-hover)'
+      }
+    }),
+    menu: (base: any) => ({
+      ...base,
+      backgroundColor: 'var(--bg-2)',
+      border: '1px solid var(--border)',
+      borderRadius: 'var(--radius)',
+      overflow: 'hidden',
+      zIndex: 5
+    }),
+    option: (base: any, state: any) => ({
+      ...base,
+      backgroundColor: state.isFocused ? 'var(--bg-hover)' : 'transparent',
+      color: state.isSelected ? 'var(--purple)' : 'var(--text-1)',
+      cursor: 'pointer',
+      "&:active": {
+        backgroundColor: 'var(--purple-dim)'
+      }
+    }),
+    singleValue: (base: any) => ({
+      ...base,
+      color: 'var(--text-0)'
+    }),
+    input: (base: any) => ({
+      ...base,
+      color: 'var(--text-0)'
+    }),
+    placeholder: (base: any) => ({
+      ...base,
+      color: 'var(--text-3)'
+    })
   };
 
   if (loading) {
@@ -177,16 +246,32 @@ export default function SettingsPage() {
                   🕒 Life Schedule & Timezone
                 </h3>
                 
-                <div className="form-group">
-                  <label className="form-label">Timezone (e.g., America/New_York)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={persona.timezone || "UTC"}
-                    onChange={(e) => setPersona({ ...persona, timezone: e.target.value })}
-                    disabled={savingPersona}
-                    placeholder="America/New_York"
-                  />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '18px' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Select Country</label>
+                    <Select
+                      options={countryOptions}
+                      value={selectedCountry}
+                      onChange={(opt: any) => {
+                        const tzs = ct.getTimezonesForCountry(opt.value);
+                        if (tzs.length > 0) {
+                          setPersona({ ...persona, timezone: tzs[0].name });
+                        }
+                      }}
+                      styles={selectStyles}
+                      placeholder="Search country..."
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Select Timezone</label>
+                    <Select
+                      options={timezoneOptions}
+                      value={timezoneOptions.find(t => t.value === persona.timezone)}
+                      onChange={(opt: any) => setPersona({ ...persona, timezone: opt.value })}
+                      styles={selectStyles}
+                      placeholder="Select timezone..."
+                    />
+                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
