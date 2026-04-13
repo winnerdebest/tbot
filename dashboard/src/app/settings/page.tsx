@@ -14,6 +14,11 @@ export default function SettingsPage() {
   const [savingPersona, setSavingPersona] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
+  // Raw string states to handle typing smoothly
+  const [traitsInput, setTraitsInput] = useState("");
+  const [emotionsInput, setEmotionsInput] = useState("");
+  const [workShiftsInput, setWorkShiftsInput] = useState("");
+
   const showToast = (type: "success" | "error", message: string) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 4000);
@@ -28,6 +33,17 @@ export default function SettingsPage() {
         ]);
         setBotEnabled(healthData.bot_enabled);
         setPersona(personaData);
+
+        // Initialize raw string states
+        if (personaData.character_traits) {
+          setTraitsInput(personaData.character_traits.join('\n'));
+        }
+        if (personaData.emotion_style) {
+          setEmotionsInput(personaData.emotion_style.join('\n'));
+        }
+        if (personaData.work_schedule) {
+          setWorkShiftsInput(personaData.work_schedule.map((s: number[]) => s.join('-')).join(', '));
+        }
       } catch (err) {
         console.error("Failed to load settings:", err);
         showToast("error", "Failed to load settings");
@@ -58,7 +74,34 @@ export default function SettingsPage() {
     if (!persona) return;
     setSavingPersona(true);
     try {
-      await updatePersona(persona);
+      // Parse raw strings back into arrays before saving
+      const character_traits = traitsInput
+        .split('\n')
+        .map(t => t.trim())
+        .filter(t => t !== '');
+
+      const emotion_style = emotionsInput
+        .split('\n')
+        .map(e => e.trim())
+        .filter(e => e !== '');
+
+      const work_schedule = workShiftsInput
+        .split(',')
+        .map(s => {
+          const parts = s.trim().split('-').map(n => parseInt(n.trim()));
+          return parts;
+        })
+        .filter(s => s.length === 2 && !isNaN(s[0]) && !isNaN(s[1]));
+
+      const payload = {
+        ...persona,
+        character_traits,
+        emotion_style,
+        work_schedule
+      };
+
+      await updatePersona(payload);
+      setPersona(payload); // Update local persona state to stay in sync
       showToast("success", "Persona updated successfully");
     } catch (err) {
       showToast("error", "Failed to update persona");
@@ -68,13 +111,11 @@ export default function SettingsPage() {
   };
 
   const handleTraitsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const traits = e.target.value.split('\n').filter(t => t.trim() !== '');
-    setPersona({ ...persona, character_traits: traits });
+    setTraitsInput(e.target.value);
   };
 
   const handleEmotionsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const emotions = e.target.value.split('\n').filter(e => e.trim() !== '');
-    setPersona({ ...persona, emotion_style: emotions });
+    setEmotionsInput(e.target.value);
   };
 
   // ── Timezone Helpers ──
@@ -221,24 +262,24 @@ export default function SettingsPage() {
 
               <div className="form-group">
                 <label className="form-label">Character Traits (One per line)</label>
-                <textarea
-                  className="form-input"
-                  rows={4}
-                  value={persona.character_traits?.join('\n')}
-                  onChange={handleTraitsChange}
-                  disabled={savingPersona}
-                />
+                  <textarea
+                    className="form-input"
+                    rows={4}
+                    value={traitsInput}
+                    onChange={handleTraitsChange}
+                    disabled={savingPersona}
+                  />
               </div>
 
               <div className="form-group">
                 <label className="form-label">Emotion Style (One per line)</label>
-                <textarea
-                  className="form-input"
-                  rows={3}
-                  value={persona.emotion_style?.join('\n')}
-                  onChange={handleEmotionsChange}
-                  disabled={savingPersona}
-                />
+                  <textarea
+                    className="form-input"
+                    rows={3}
+                    value={emotionsInput}
+                    onChange={handleEmotionsChange}
+                    disabled={savingPersona}
+                  />
               </div>
 
               <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '24px' }}>
@@ -310,11 +351,8 @@ export default function SettingsPage() {
                   <input
                     type="text"
                     className="form-input"
-                    value={persona.work_schedule?.map((s: number[]) => s.join('-')).join(', ') || ""}
-                    onChange={(e) => {
-                      const shifts = e.target.value.split(',').map(s => s.trim().split('-').map(n => parseInt(n)));
-                      setPersona({ ...persona, work_schedule: shifts.filter(s => s.length === 2 && !isNaN(s[0])) });
-                    }}
+                    value={workShiftsInput}
+                    onChange={(e) => setWorkShiftsInput(e.target.value)}
                     disabled={savingPersona}
                     placeholder="9-12, 13-17"
                   />
