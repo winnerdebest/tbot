@@ -11,10 +11,30 @@ import {
   updateUserGoal,
   toggleBlockUser,
   regenerateSummary,
+  updateContactControls,
+  approveDraftMessage,
+  discardDraftMessage,
   type MessageLog,
   type UserProfile,
 } from "@/lib/api";
-import { CopyX, Lock, Unlock, Edit2, RotateCw, Loader2, Brain, Target, MessageSquare, Activity, UserX, CheckCircle } from 'lucide-react';
+import {
+  Lock,
+  Unlock,
+  Edit2,
+  RotateCw,
+  Loader2,
+  Brain,
+  Target,
+  MessageSquare,
+  Activity,
+  UserX,
+  CheckCircle,
+  Check,
+  X,
+  PauseCircle,
+  PlayCircle,
+  FileEdit,
+} from "lucide-react";
 
 interface UserDetail extends UserProfile {
   message_count: number;
@@ -30,17 +50,25 @@ export default function UserDetailPage() {
   const [loading, setLoading] = useState(true);
   const [messageText, setMessageText] = useState("");
   const [sending, setSending] = useState(false);
+
   const [editingSummary, setEditingSummary] = useState(false);
   const [summaryDraft, setSummaryDraft] = useState("");
   const [savingSummary, setSavingSummary] = useState(false);
-  
+
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalDraft, setGoalDraft] = useState("");
   const [strictnessDraft, setStrictnessDraft] = useState("balanced");
   const [savingGoal, setSavingGoal] = useState(false);
 
+  // Draft editing state
+  const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
+  const [draftEditContent, setDraftEditContent] = useState("");
+
   const [regenerating, setRegenerating] = useState(false);
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [toast, setToast] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const showToast = (type: "success" | "error", message: string) => {
@@ -52,26 +80,26 @@ export default function UserDetailPage() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [userData, msgData] = await Promise.all([
-          fetchUserDetail(telegramId),
-          fetchUserMessages(telegramId),
-        ]);
-        setUser(userData);
-        setMessages(msgData.messages);
-        setSummaryDraft(userData.lifestyle_summary);
-        setGoalDraft(userData.target_goal || "");
-        setStrictnessDraft(userData.goal_strictness || "balanced");
-      } catch (err) {
-        console.error("Failed to load user data:", err);
-        showToast("error", "Failed to load user data — is the bot running?");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadData = async () => {
+    try {
+      const [userData, msgData] = await Promise.all([
+        fetchUserDetail(telegramId),
+        fetchUserMessages(telegramId),
+      ]);
+      setUser(userData);
+      setMessages(msgData.messages);
+      setSummaryDraft(userData.lifestyle_summary);
+      setGoalDraft(userData.target_goal || userData.context_notes || "");
+      setStrictnessDraft(userData.goal_strictness || userData.goal_mode || "balanced");
+    } catch (err) {
+      console.error("Failed to load user data:", err);
+      showToast("error", "Failed to load contact data");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadData();
   }, [telegramId]);
 
@@ -95,18 +123,19 @@ export default function UserDetailPage() {
           {
             id: crypto.randomUUID(),
             telegram_id: telegramId,
-            role: "bot",
+            role: "owner",
+            status: "sent",
             content: messageText.trim(),
             created_at: new Date().toISOString(),
           },
         ]);
         setMessageText("");
-        showToast("success", "Message sent ✓");
+        showToast("success", "Message sent & AI auto-paused for this chat ✓");
       } else {
         showToast("error", result.detail || "Failed to send");
       }
     } catch {
-      showToast("error", "Connection failed — is the bot running?");
+      showToast("error", "Connection failed");
     } finally {
       setSending(false);
     }
@@ -116,9 +145,11 @@ export default function UserDetailPage() {
     setSavingSummary(true);
     try {
       await updateUserSummary(telegramId, summaryDraft);
-      setUser((prev) => (prev ? { ...prev, lifestyle_summary: summaryDraft } : prev));
+      setUser((prev) =>
+        prev ? { ...prev, lifestyle_summary: summaryDraft } : prev
+      );
       setEditingSummary(false);
-      showToast("success", "Summary updated ✓");
+      showToast("success", "Memory summary updated ✓");
     } catch {
       showToast("error", "Failed to update summary");
     } finally {
@@ -130,11 +161,20 @@ export default function UserDetailPage() {
     setSavingGoal(true);
     try {
       await updateUserGoal(telegramId, goalDraft, strictnessDraft);
-      setUser((prev) => (prev ? { ...prev, target_goal: goalDraft || null, goal_strictness: strictnessDraft } : prev));
+      setUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              target_goal: goalDraft || null,
+              context_notes: goalDraft || null,
+              goal_strictness: strictnessDraft,
+            }
+          : prev
+      );
       setEditingGoal(false);
-      showToast("success", "Goal updated ✓");
+      showToast("success", "Context note updated ✓");
     } catch {
-      showToast("error", "Failed to update goal");
+      showToast("error", "Failed to update note");
     } finally {
       setSavingGoal(false);
     }
@@ -144,10 +184,61 @@ export default function UserDetailPage() {
     if (!user) return;
     try {
       await toggleBlockUser(telegramId, !user.is_blocked);
-      setUser((prev) => (prev ? { ...prev, is_blocked: !prev.is_blocked } : prev));
-      showToast("success", user.is_blocked ? "User unblocked" : "User blocked");
+      setUser((prev) =>
+        prev ? { ...prev, is_blocked: !prev.is_blocked } : prev
+      );
+      showToast("success", user.is_blocked ? "Contact unblocked" : "Contact blocked");
     } catch {
       showToast("error", "Failed to toggle block");
+    }
+  };
+
+  const handleChangeAiMode = async (mode: "default" | "on" | "off" | "draft") => {
+    try {
+      const res = await updateContactControls(telegramId, { ai_mode: mode });
+      setUser((prev) => (prev ? { ...prev, ...res.contact } : prev));
+      showToast("success", `Chat AI mode set to ${mode.toUpperCase()}`);
+    } catch {
+      showToast("error", "Failed to update AI mode");
+    }
+  };
+
+  const handlePauseToggle = async () => {
+    if (!user) return;
+    const isPaused =
+      user.paused_until && new Date(user.paused_until) > new Date();
+    try {
+      const res = await updateContactControls(telegramId, {
+        pause_minutes: isPaused ? 0 : 60,
+      });
+      setUser((prev) => (prev ? { ...prev, ...res.contact } : prev));
+      showToast(
+        "success",
+        isPaused ? "AI resumed for this contact" : "AI paused for 60 minutes"
+      );
+    } catch {
+      showToast("error", "Failed to update pause state");
+    }
+  };
+
+  const handleApproveDraft = async (msgId: string, customText?: string) => {
+    try {
+      await approveDraftMessage(msgId, customText);
+      setEditingDraftId(null);
+      await loadData();
+      showToast("success", "Draft approved & sent ✓");
+    } catch (err: any) {
+      showToast("error", err?.message || "Failed to approve draft");
+    }
+  };
+
+  const handleDiscardDraft = async (msgId: string) => {
+    try {
+      await discardDraftMessage(msgId);
+      setMessages((prev) => prev.filter((m) => m.id !== msgId));
+      showToast("success", "Draft discarded");
+    } catch {
+      showToast("error", "Failed to discard draft");
     }
   };
 
@@ -156,14 +247,16 @@ export default function UserDetailPage() {
     try {
       const result = await regenerateSummary(telegramId);
       if (result.status === "ok" && result.summary) {
-        setUser((prev) => (prev ? { ...prev, lifestyle_summary: result.summary! } : prev));
+        setUser((prev) =>
+          prev ? { ...prev, lifestyle_summary: result.summary! } : prev
+        );
         setSummaryDraft(result.summary);
         showToast("success", "Summary regenerated ✓");
       } else {
         showToast("error", "Failed to regenerate");
       }
-    } catch {
-      showToast("error", "Failed — is the AI API configured?");
+    } catch (err: any) {
+      showToast("error", err?.message || "Failed — check your Groq API key");
     } finally {
       setRegenerating(false);
     }
@@ -193,7 +286,10 @@ export default function UserDetailPage() {
       <div className="fade-in">
         <div className="page-header">
           <div className="skeleton skeleton-text" style={{ width: 200 }} />
-          <div className="skeleton skeleton-text" style={{ width: 300, marginTop: 8 }} />
+          <div
+            className="skeleton skeleton-text"
+            style={{ width: 300, marginTop: 8 }}
+          />
         </div>
         <div className="crm-layout">
           <div className="glass-card" style={{ height: 400 }}>
@@ -211,11 +307,13 @@ export default function UserDetailPage() {
     return (
       <div className="fade-in">
         <div className="empty-state">
-          <div className="empty-state-icon"><UserX size={32} /></div>
-          <p className="empty-state-text">User not found</p>
+          <div className="empty-state-icon">
+            <UserX size={32} />
+          </div>
+          <p className="empty-state-text">Contact not found</p>
           <Link href="/users">
             <button className="btn btn-secondary" style={{ marginTop: 16 }}>
-              ← Back to Users
+              ← Back to Inbox
             </button>
           </Link>
         </div>
@@ -223,15 +321,40 @@ export default function UserDetailPage() {
     );
   }
 
+  const isPaused = Boolean(
+    user.paused_until && new Date(user.paused_until) > new Date()
+  );
+
   return (
     <div className="fade-in">
       {/* Header */}
-      <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div
+        className="page-header"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          flexWrap: "wrap",
+          gap: 12,
+        }}
+      >
         <div>
-          <Link href="/users" className="text-sm text-muted" style={{ display: "inline-flex", alignItems: "center", gap: 4, marginBottom: 8 }}>
-            ← Back to Users
+          <Link
+            href="/users"
+            className="text-sm text-muted"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              marginBottom: 8,
+            }}
+          >
+            ← Back to Inbox
           </Link>
-          <h1 className="page-title" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <h1
+            className="page-title"
+            style={{ display: "flex", alignItems: "center", gap: 12 }}
+          >
             <span className="user-detail-avatar">
               {user.first_name.charAt(0).toUpperCase()}
             </span>
@@ -239,56 +362,133 @@ export default function UserDetailPage() {
             {user.is_blocked && <span className="blocked-badge">Blocked</span>}
           </h1>
           <p className="page-subtitle">
-            {user.username ? `@${user.username}` : "No username"} · ID: {user.telegram_id} · {user.message_count} messages
+            {user.username ? `@${user.username}` : "No username"} · ID:{" "}
+            {user.telegram_id} · {user.message_count} messages
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <select
+            className="form-input"
+            value={user.ai_mode || "default"}
+            onChange={(e) => handleChangeAiMode(e.target.value as any)}
+            style={{ width: "auto", fontSize: 13, padding: "8px 12px", appearance: "auto" }}
+          >
+            <option value="default">Mode: Global Default</option>
+            <option value="on">Always Auto-Reply</option>
+            <option value="draft">Draft Approval Mode</option>
+            <option value="off">AI Disabled for Contact</option>
+          </select>
+
+          <button
+            onClick={handlePauseToggle}
+            className="btn btn-secondary"
+            style={{ fontSize: 13, padding: "8px 14px" }}
+          >
+            {isPaused ? (
+              <>
+                <PlayCircle size={14} color="var(--emerald)" /> Resume AI
+              </>
+            ) : (
+              <>
+                <PauseCircle size={14} /> Snooze 1h
+              </>
+            )}
+          </button>
+
           <button
             onClick={handleToggleBlock}
             className={`btn ${user.is_blocked ? "btn-primary" : "btn-danger"}`}
             style={{ fontSize: 13, padding: "8px 16px" }}
           >
-            {user.is_blocked ? <><Unlock size={14} /> Unblock</> : <><Lock size={14} /> Block User</>}
+            {user.is_blocked ? (
+              <>
+                <Unlock size={14} /> Unblock
+              </>
+            ) : (
+              <>
+                <Lock size={14} /> Block
+              </>
+            )}
           </button>
         </div>
       </div>
 
       {/* CRM Layout */}
       <div className="crm-layout">
-        {/* Left Column — User Info */}
+        {/* Left Column — Contact Info & Memory */}
         <div className="crm-sidebar">
-          {/* Stats */}
           <div className="glass-card">
-            <h3 className="glass-card-title" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}><Activity size={18} /> Quick Stats</h3>
+            <h3
+              className="glass-card-title"
+              style={{
+                marginBottom: 16,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <Activity size={18} /> Contact Status
+            </h3>
             <div className="crm-stat-row">
               <span className="text-sm text-muted">Total Messages</span>
-              <span style={{ fontWeight: 700, fontSize: 18 }}>{user.message_count}</span>
+              <span style={{ fontWeight: 700, fontSize: 18 }}>
+                {user.message_count}
+              </span>
             </div>
             <div className="crm-stat-row">
               <span className="text-sm text-muted">Last Active</span>
               <span className="text-sm">{formatDate(user.last_active)}</span>
             </div>
             <div className="crm-stat-row">
-              <span className="text-sm text-muted">Status</span>
+              <span className="text-sm text-muted">AI Status</span>
               <span className="text-sm">
                 {user.is_blocked ? (
-                  <span style={{ color: "var(--accent-rose)", display: 'flex', alignItems: 'center', gap: 4 }}><Lock size={14} /> Blocked</span>
+                  <span
+                    style={{
+                      color: "var(--accent-rose)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    <Lock size={14} /> Blocked
+                  </span>
+                ) : isPaused ? (
+                  <span style={{ color: "var(--amber)" }}>
+                    Snoozed until {formatTime(user.paused_until!)}
+                  </span>
                 ) : (
-                  <span style={{ color: "var(--accent-emerald)", display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle size={14} /> Active</span>
+                  <span
+                    style={{
+                      color: "var(--accent-emerald)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    <CheckCircle size={14} /> Active ({user.ai_mode || "default"})
+                  </span>
                 )}
               </span>
             </div>
           </div>
 
-          {/* Strategic Goal */}
+          {/* Context Notes & Goal */}
           <div className="glass-card" style={{ marginBottom: 16 }}>
             <div className="glass-card-header">
-              <h3 className="glass-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Target size={18} /> Strategic Goal</h3>
+              <h3
+                className="glass-card-title"
+                style={{ display: "flex", alignItems: "center", gap: 6 }}
+              >
+                <Target size={18} /> Contact Notes & Goal
+              </h3>
               <button
                 onClick={() => {
                   setEditingGoal(!editingGoal);
-                  setGoalDraft(user.target_goal || "");
-                  setStrictnessDraft(user.goal_strictness || "balanced");
+                  setGoalDraft(user.target_goal || user.context_notes || "");
+                  setStrictnessDraft(
+                    user.goal_strictness || user.goal_mode || "balanced"
+                  );
                 }}
                 className="btn btn-secondary"
                 style={{ fontSize: 11, padding: "4px 10px" }}
@@ -302,7 +502,7 @@ export default function UserDetailPage() {
                 <textarea
                   className="form-input"
                   rows={3}
-                  placeholder="e.g. Make the user trust you and feel loved..."
+                  placeholder="e.g. Find out what time works for dinner on Friday..."
                   value={goalDraft}
                   onChange={(e) => setGoalDraft(e.target.value)}
                   disabled={savingGoal}
@@ -315,9 +515,9 @@ export default function UserDetailPage() {
                   disabled={savingGoal}
                   style={{ fontSize: 13, marginBottom: 12, appearance: "auto" }}
                 >
-                  <option value="subtle">Low (Subtle / Patient)</option>
-                  <option value="balanced">Medium (Balanced)</option>
-                  <option value="aggressive">High (Aggressive / Direct)</option>
+                  <option value="subtle">Subtle / Natural</option>
+                  <option value="balanced">Balanced</option>
+                  <option value="direct">Direct / Proactive</option>
                 </select>
                 <div style={{ display: "flex", gap: 8 }}>
                   <button
@@ -326,7 +526,7 @@ export default function UserDetailPage() {
                     className="btn btn-primary"
                     style={{ fontSize: 12, padding: "8px 16px" }}
                   >
-                    {savingGoal ? "Saving..." : "Save Goal"}
+                    {savingGoal ? "Saving..." : "Save Note"}
                   </button>
                   <button
                     onClick={() => setEditingGoal(false)}
@@ -339,28 +539,48 @@ export default function UserDetailPage() {
               </div>
             ) : (
               <div>
-                {user.target_goal ? (
+                {user.target_goal || user.context_notes ? (
                   <>
-                    <p className="text-sm" style={{ color: "var(--text-secondary)", lineHeight: 1.7, marginBottom: 8 }}>
-                      {user.target_goal}
+                    <p
+                      className="text-sm"
+                      style={{
+                        color: "var(--text-1)",
+                        lineHeight: 1.7,
+                        marginBottom: 8,
+                      }}
+                    >
+                      {user.target_goal || user.context_notes}
                     </p>
                     <span className="glass-card-badge" style={{ fontSize: 10 }}>
-                      Strategy: {user.goal_strictness?.toUpperCase() || 'BALANCED'}
+                      Approach:{" "}
+                      {(
+                        user.goal_strictness ||
+                        user.goal_mode ||
+                        "balanced"
+                      ).toUpperCase()}
                     </span>
                   </>
                 ) : (
-                  <p className="text-sm text-muted" style={{ fontStyle: "italic" }}>
-                    No goal set. AI will act normally.
+                  <p
+                    className="text-sm text-muted"
+                    style={{ fontStyle: "italic" }}
+                  >
+                    No custom note set. AI replies naturally using your persona.
                   </p>
                 )}
               </div>
             )}
           </div>
 
-          {/* Lifestyle Summary */}
+          {/* Lifestyle / Memory Summary */}
           <div className="glass-card">
             <div className="glass-card-header">
-              <h3 className="glass-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Brain size={18} /> AI Summary</h3>
+              <h3
+                className="glass-card-title"
+                style={{ display: "flex", alignItems: "center", gap: 6 }}
+              >
+                <Brain size={18} /> AI Memory Summary
+              </h3>
               <div style={{ display: "flex", gap: 6 }}>
                 <button
                   onClick={handleRegenerate}
@@ -368,7 +588,12 @@ export default function UserDetailPage() {
                   className="btn btn-secondary"
                   style={{ fontSize: 11, padding: "4px 10px" }}
                 >
-                  {regenerating ? <Loader2 size={12} className="animate-spin" /> : <RotateCw size={12} />} Regen
+                  {regenerating ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <RotateCw size={12} />
+                  )}{" "}
+                  Regen
                 </button>
                 <button
                   onClick={() => {
@@ -412,51 +637,181 @@ export default function UserDetailPage() {
                 </div>
               </div>
             ) : (
-              <p className="text-sm" style={{ color: "var(--text-secondary)", lineHeight: 1.7 }}>
+              <p
+                className="text-sm"
+                style={{ color: "var(--text-1)", lineHeight: 1.7 }}
+              >
                 {user.lifestyle_summary}
               </p>
             )}
           </div>
         </div>
 
-        {/* Right Column — Chat */}
-        <div className="crm-chat-container glass-card" style={{ padding: 0, display: "flex", flexDirection: "column" }}>
-          {/* Chat Header */}
+        {/* Right Column — Conversation & Draft Approval */}
+        <div
+          className="crm-chat-container glass-card"
+          style={{ padding: 0, display: "flex", flexDirection: "column" }}
+        >
           <div className="crm-chat-header">
-            <h3 className="glass-card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MessageSquare size={18} /> Conversation</h3>
+            <h3
+              className="glass-card-title"
+              style={{ display: "flex", alignItems: "center", gap: 6 }}
+            >
+              <MessageSquare size={18} /> Conversation
+            </h3>
             <span className="glass-card-badge">{messages.length} messages</span>
           </div>
 
-          {/* Chat Messages */}
           <div className="crm-chat-messages">
             {messages.length === 0 ? (
               <div className="empty-state" style={{ padding: "40px 20px" }}>
-                <div className="empty-state-icon"><MessageSquare size={32} /></div>
+                <div className="empty-state-icon">
+                  <MessageSquare size={32} />
+                </div>
                 <p className="empty-state-text">No messages yet</p>
               </div>
             ) : (
-              messages.map((msg, i) => (
-                <div
-                  key={msg.id}
-                  className={`crm-msg ${msg.role === "bot" ? "crm-msg-bot" : "crm-msg-user"}`}
-                  style={{ animationDelay: `${Math.min(i * 0.02, 0.5)}s` }}
-                >
-                  <div className="crm-msg-bubble">
-                    <p className="crm-msg-text">{msg.content}</p>
-                    <span className="crm-msg-time">{formatTime(msg.created_at)}</span>
+              messages.map((msg, i) => {
+                const isBotOrOwner = msg.role === "bot" || msg.role === "owner";
+                const isDraft = msg.status === "draft";
+                return (
+                  <div
+                    key={msg.id}
+                    className={`crm-msg ${
+                      isBotOrOwner ? "crm-msg-bot" : "crm-msg-user"
+                    }`}
+                    style={{ animationDelay: `${Math.min(i * 0.02, 0.5)}s` }}
+                  >
+                    <div
+                      className="crm-msg-bubble"
+                      style={
+                        isDraft
+                          ? {
+                              border: "1px dashed var(--amber)",
+                              background: "rgba(252, 211, 77, 0.12)",
+                            }
+                          : undefined
+                      }
+                    >
+                      <div
+                        style={{
+                          fontSize: 10.5,
+                          opacity: 0.85,
+                          marginBottom: 4,
+                          fontWeight: 600,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 5,
+                        }}
+                      >
+                        {isDraft ? (
+                          <>
+                            <FileEdit size={12} color="var(--amber)" />
+                            <span>AI DRAFT (Awaiting Your Approval)</span>
+                          </>
+                        ) : msg.role === "owner" ? (
+                          "You (Sent Manually)"
+                        ) : msg.role === "bot" ? (
+                          "AI Agent"
+                        ) : (
+                          user.first_name
+                        )}
+                      </div>
+
+                      {editingDraftId === msg.id ? (
+                        <div style={{ marginTop: 6 }}>
+                          <textarea
+                            className="form-input"
+                            rows={3}
+                            value={draftEditContent}
+                            onChange={(e) => setDraftEditContent(e.target.value)}
+                            style={{ fontSize: 13, marginBottom: 8 }}
+                          />
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              style={{ padding: "5px 10px", fontSize: 11 }}
+                              onClick={() =>
+                                handleApproveDraft(msg.id, draftEditContent)
+                              }
+                            >
+                              Send Edited
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              style={{ padding: "5px 10px", fontSize: 11 }}
+                              onClick={() => setEditingDraftId(null)}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="crm-msg-text">{msg.content}</p>
+                      )}
+
+                      <span className="crm-msg-time">
+                        {formatTime(msg.created_at)}
+                      </span>
+
+                      {isDraft && editingDraftId !== msg.id && (
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 6,
+                            marginTop: 10,
+                            paddingTop: 8,
+                            borderTop: "1px solid var(--border)",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            className="btn btn-primary"
+                            style={{ padding: "5px 10px", fontSize: 11 }}
+                            onClick={() => handleApproveDraft(msg.id)}
+                          >
+                            <Check size={12} /> Approve & Send
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            style={{ padding: "5px 10px", fontSize: 11 }}
+                            onClick={() => {
+                              setEditingDraftId(msg.id);
+                              setDraftEditContent(msg.content);
+                            }}
+                          >
+                            <Edit2 size={12} /> Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-danger"
+                            style={{ padding: "5px 10px", fontSize: 11 }}
+                            onClick={() => handleDiscardDraft(msg.id)}
+                          >
+                            <X size={12} /> Discard
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
             <div ref={chatEndRef} />
           </div>
 
-          {/* Chat Input */}
           <form className="crm-chat-input" onSubmit={handleSendMessage}>
             <input
               type="text"
               className="form-input"
-              placeholder={user.is_blocked ? "User is blocked" : "Type a message..."}
+              placeholder={
+                user.is_blocked
+                  ? "Contact is blocked"
+                  : "Send a manual message as yourself (auto-pauses AI)..."
+              }
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
               disabled={sending || user.is_blocked}
@@ -474,12 +829,7 @@ export default function UserDetailPage() {
         </div>
       </div>
 
-      {/* Toast */}
-      {toast && (
-        <div className={`toast ${toast.type}`}>
-          {toast.message}
-        </div>
-      )}
+      {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
     </div>
   );
 }

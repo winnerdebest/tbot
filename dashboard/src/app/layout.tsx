@@ -3,8 +3,12 @@ import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 
 export const metadata: Metadata = {
-  title: "Ani Dashboard — Telegram AI Assistant",
-  description: "Monitor and manage your Telegram AI assistant in real-time",
+  title: "Ani — Personal Telegram AI Agent",
+  description: "Connect your Telegram and Groq API key to automate replies with memory and full control",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

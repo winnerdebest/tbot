@@ -4,21 +4,26 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow login page and auth API routes
+  // Public routes: landing (/welcome), login/register (/login), API proxy/auth, static assets
   if (
     pathname === "/login" ||
-    pathname.startsWith("/api/auth") ||
+    pathname === "/welcome" ||
+    pathname === "/icon.svg" ||
+    pathname.startsWith("/api/") ||
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico"
   ) {
     return NextResponse.next();
   }
 
-  // Check auth cookie
   const authCookie = request.cookies.get("ani-auth");
-  if (!authCookie || authCookie.value !== "authenticated") {
-    const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
+  if (!authCookie || !authCookie.value) {
+    // Send unauthenticated visitors on "/" to the public landing page (/welcome)
+    const targetUrl = new URL(
+      pathname === "/" ? "/welcome" : "/login",
+      request.url
+    );
+    return NextResponse.redirect(targetUrl);
   }
 
   return NextResponse.next();

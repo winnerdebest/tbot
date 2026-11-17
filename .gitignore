@@ -1,0 +1,31 @@
+# Environment files (never commit secrets)
+.env
+.env.*
+!**/.env.example
+backend/.env
+dashboard/.env.local
+dashboard/.env
+
+# Telegram session files
+*.session
+*.session-journal
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+*.log
+*.db
+*.sqlite3
